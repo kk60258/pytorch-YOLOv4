@@ -58,6 +58,76 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     return carea / uarea
 
 
+def iou(box, others):
+    xx1 = np.maximum(box[0], others[:, 0])
+    yy1 = np.maximum(box[1], others[:, 1])
+    xx2 = np.minimum(box[2], others[:, 2])
+    yy2 = np.minimum(box[3], others[:, 3])
+
+    w = np.maximum(0.0, xx2 - xx1)
+    h = np.maximum(0.0, yy2 - yy1)
+    inter = w * h
+
+    areas_box = (box[2] - box[0]) * (box[3] - box[1])
+    areas_other = (others[:, 2] - others[:, 0]) * (others[:, 3] - others[:, 1])
+
+    value = inter / (areas_box + areas_other - inter)
+
+    return value
+
+
+def ciou(box, others):
+    iou_term = iou(box, others)
+    xx1 = np.minimum(box[0], others[:, 0])
+    yy1 = np.minimum(box[1], others[:, 1])
+    xx2 = np.maximum(box[2], others[:, 2])
+    yy2 = np.maximum(box[3], others[:, 3])
+
+    c = (xx2 - xx1) ** 2 + (yy1 - yy2) ** 2
+
+    # if c == 0 :
+    #     return iou_term
+
+    x_box_center = (box[2] + box[0]) * 0.5
+    y_box_center = (box[3] + box[1]) * 0.5
+    x_other_center = (others[:, 2] + others[:, 0]) * 0.5
+    y_other_center = (others[:, 3] + others[:, 1]) * 0.5
+    u = (x_box_center - x_other_center) ** 2 + (y_box_center - y_other_center) ** 2
+    d = u / (c+1e-6)
+
+    ar_box = (box[2] - box[0]) / (box[3] - box[1])
+    ar_other = (others[:, 2] - others[:, 0]) / (others[:, 3] - others[:, 1])
+    v = 4 / (np.pi ** 2) * (np.arctan(ar_box) - np.arctan(ar_other)) ** 2
+    alpha = v / (1 - iou_term + v + 1e-6)
+
+    ciou_term = d + alpha * v
+    return iou_term - ciou_term
+
+
+def nms(boxes, confs, nms_thresh=0.5, min_mode=False):
+    # print(boxes.shape)
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+
+    areas = (x2 - x1) * (y2 - y1)
+    order = confs.argsort()[::-1]
+
+    keep = []
+    while order.size > 0:
+        idx_self = order[0]
+        idx_other = order[1:]
+
+        keep.append(idx_self)
+        over = iou(boxes[idx_self], boxes[idx_other])
+
+        inds = np.where(over <= nms_thresh)[0]
+        order = order[inds + 1]
+
+    return np.array(keep)
+
+
 def nms_cpu(boxes, confs, nms_thresh=0.5, min_mode=False):
     # print(boxes.shape)
     x1 = boxes[:, 0]
@@ -91,7 +161,7 @@ def nms_cpu(boxes, confs, nms_thresh=0.5, min_mode=False):
 
         inds = np.where(over <= nms_thresh)[0]
         order = order[inds + 1]
-    
+
     return np.array(keep)
 
 
@@ -137,8 +207,8 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
             t_size = cv2.getTextSize(msg, 0, 0.7, thickness=bbox_thick // 2)[0]
             c1, c2 = (x1,y1), (x2, y2)
             c3 = (c1[0] + t_size[0], c1[1] - t_size[1] - 3)
-            cv2.rectangle(img, (x1,y1), (np.float32(c3[0]), np.float32(c3[1])), rgb, -1)
-            img = cv2.putText(img, msg, (c1[0], np.float32(c1[1] - 2)), cv2.FONT_HERSHEY_SIMPLEX,0.7, (0,0,0), bbox_thick//2,lineType=cv2.LINE_AA)
+            cv2.rectangle(img, (x1,y1), (c3[0], c3[1]), rgb, -1)
+            img = cv2.putText(img, msg, (c1[0], c1[1] - 2), cv2.FONT_HERSHEY_SIMPLEX,0.7, (0,0,0), bbox_thick//2,lineType=cv2.LINE_AA)
         
         img = cv2.rectangle(img, (x1, y1), (x2, y2), rgb, bbox_thick)
     if savename:
@@ -216,7 +286,7 @@ def post_processing(img, conf_thresh, nms_thresh, output):
             ll_max_conf = l_max_conf[cls_argwhere]
             ll_max_id = l_max_id[cls_argwhere]
 
-            keep = nms_cpu(ll_box_array, ll_max_conf, nms_thresh)
+            keep = nms(ll_box_array, ll_max_conf, nms_thresh)
             
             if (keep.size > 0):
                 ll_box_array = ll_box_array[keep, :]

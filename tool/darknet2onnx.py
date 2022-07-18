@@ -16,7 +16,7 @@ def transform_to_onnx(cfgfile, weightfile, batch_size=1, onnx_file_name=None):
 
     input_names = ["input"]
     output_names = ['boxes', 'confs']
-
+    # output_names = ['conv18', 'conv21', 'conv24']
     if dynamic:
         x = torch.randn((1, 3, model.height, model.width), requires_grad=True)
         if not onnx_file_name:
@@ -38,7 +38,8 @@ def transform_to_onnx(cfgfile, weightfile, batch_size=1, onnx_file_name=None):
 
     else:
         x = torch.randn((batch_size, 3, model.height, model.width), requires_grad=True)
-        onnx_file_name = "yolov4_{}_3_{}_{}_static.onnx".format(batch_size, model.height, model.width)
+        if not onnx_file_name:
+          onnx_file_name = "yolov4_{}_3_{}_{}_static.onnx".format(batch_size, model.height, model.width)
         torch.onnx.export(model,
                           x,
                           onnx_file_name,

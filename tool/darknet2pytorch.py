@@ -224,6 +224,10 @@ class Darknet(nn.Module):
                 out_boxes.append(boxes)
             elif block['type'] == 'cost':
                 continue
+            elif block['type'] == 'output':
+                layers = block['layers'].split(',')
+                layers = [int(i) if int(i) > 0 else int(i) + ind for i in layers]
+                return [outputs[l] for l in layers]
             else:
                 print('unknown type %s' % (block['type']))
 
@@ -332,9 +336,9 @@ class Darknet(nn.Module):
                 prev_stride = prev_stride // stride
                 out_strides.append(prev_stride)
 
-                models.append(Upsample_expand(stride))
-                # models.append(Upsample_interpolate(stride))
-
+                # models.append(Upsample_expand(stride))
+                models.append(Upsample_interpolate(stride))
+                # models.append(torch.nn.Upsample(scale_factor=stride, mode='nearest'))
             elif block['type'] == 'route':
                 layers = block['layers'].split(',')
                 ind = len(models)
@@ -351,7 +355,7 @@ class Darknet(nn.Module):
                     prev_filters = out_filters[layers[0]] + out_filters[layers[1]]
                     prev_stride = out_strides[layers[0]]
                 elif len(layers) == 4:
-                    assert (layers[0] == ind - 1)
+                    assert any([i == ind - 1 for i in layers])
                     prev_filters = out_filters[layers[0]] + out_filters[layers[1]] + out_filters[layers[2]] + \
                                    out_filters[layers[3]]
                     prev_stride = out_strides[layers[0]]
