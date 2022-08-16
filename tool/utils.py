@@ -166,7 +166,12 @@ def nms_cpu(boxes, confs, nms_thresh=0.5, min_mode=False):
 
 
 
-def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
+def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None, input_size=None, unpad_size=None):
+
+    dw = (input_size[0] - unpad_size[0]) / 2
+    dh = (input_size[1] - unpad_size[1]) / 2
+    padding=[dw, dh, dw, dh]
+
     import cv2
     img = np.copy(img)
     colors = np.array([[1, 0, 1], [0, 0, 1], [0, 1, 1], [0, 1, 0], [1, 1, 0], [1, 0, 0]], dtype=np.float32)
@@ -179,14 +184,22 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
         r = (1 - ratio) * colors[i][c] + ratio * colors[j][c]
         return int(r * 255)
 
+    def recover(box):
+        int((box[0] * input_size[0] - dw) / unpad_size[0] * width)
+
     width = img.shape[1]
     height = img.shape[0]
     for i in range(len(boxes)):
         box = boxes[i]
-        x1 = int(box[0] * width)
-        y1 = int(box[1] * height)
-        x2 = int(box[2] * width)
-        y2 = int(box[3] * height)
+        x1 = int((box[0] * input_size[0] - dw) / unpad_size[0] * width)
+        y1 = int((box[1] * input_size[1] - dh) / unpad_size[1] * height)
+        x2 = int((box[2] * input_size[0] - dw) / unpad_size[0] * width)
+        y2 = int((box[3] * input_size[1] - dh) / unpad_size[1] * height)
+
+        # x1 = int((box[0] - padding[0]) * width)
+        # y1 = int((box[1] - padding[1]) * height)
+        # x2 = int((box[2] - padding[2]) * width)
+        # y2 = int((box[3] - padding[3]) * height)
         bbox_thick = int(0.6 * (height + width) / 600)
         if color:
             rgb = color

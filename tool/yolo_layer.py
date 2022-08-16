@@ -284,7 +284,7 @@ def yolo_forward_dynamic(output, conf_thresh, num_classes, anchors, num_anchors,
 
     # boxes: [batch, num_anchors * H * W, 1, 4]
     # confs: [batch, num_anchors * H * W, num_classes]
-
+    print(f'max confs {torch.max(confs)}')
     return  boxes, confs
 
 class YoloLayer(nn.Module):
@@ -311,8 +311,8 @@ class YoloLayer(nn.Module):
         self.model_out = model_out
 
     def forward(self, output, target=None):
-        if self.training:
-            return output
+        # if self.training:
+        #     return output
         masked_anchors = []
         for m in self.anchor_mask:
             masked_anchors += self.anchors[m * self.anchor_step:(m + 1) * self.anchor_step]

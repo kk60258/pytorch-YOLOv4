@@ -34,7 +34,7 @@ def transform_to_onnx(cfgfile, weightfile, batch_size=1, onnx_file_name=None):
                           dynamic_axes=dynamic_axes)
 
         print('Onnx model exporting done')
-        return onnx_file_name
+        return onnx_file_name, model
 
     else:
         x = torch.randn((batch_size, 3, model.height, model.width), requires_grad=True)
@@ -50,7 +50,7 @@ def transform_to_onnx(cfgfile, weightfile, batch_size=1, onnx_file_name=None):
                           dynamic_axes=None)
 
         print('Onnx model exporting done')
-        return onnx_file_name
+        return onnx_file_name, model
 
 
 if __name__ == '__main__':

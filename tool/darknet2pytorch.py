@@ -231,7 +231,7 @@ class Darknet(nn.Module):
             else:
                 print('unknown type %s' % (block['type']))
 
-        if self.training:
+        if False and self.training:
             return out_boxes
         else:
             return get_region_boxes(out_boxes)
@@ -337,8 +337,8 @@ class Darknet(nn.Module):
                 out_strides.append(prev_stride)
 
                 # models.append(Upsample_expand(stride))
-                models.append(Upsample_interpolate(stride))
-                # models.append(torch.nn.Upsample(scale_factor=stride, mode='nearest'))
+                # models.append(Upsample_interpolate(stride))
+                models.append(torch.nn.Upsample(scale_factor=stride, mode='nearest'))
             elif block['type'] == 'route':
                 layers = block['layers'].split(',')
                 ind = len(models)
