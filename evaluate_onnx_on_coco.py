@@ -25,8 +25,7 @@ from pycocotools.cocoeval import COCOeval
 from cfg import Cfg
 from tool.darknet2pytorch import Darknet
 from tool.utils import load_class_names
-from tool.torch_utils import do_detect
-
+import tool.utils as utils
 
 def get_class_name(cat):
     class_names = load_class_names("./data/coco.names")
@@ -53,10 +52,8 @@ def get_class_name(cat):
 def convert_cat_id_and_reorientate_bbox(single_annotation):
     cat = single_annotation['category_id']
     bbox = single_annotation['bbox']
-    # x, y, w, h = bbox
-    # x1, y1, x2, y2 = x - w / 2, y - h / 2, x + w / 2, y + h / 2
-    x1, y1, x2, y2 = bbox
-    w, h = x2 - x1, y2 - y1
+    x, y, w, h = bbox
+    x1, y1, x2, y2 = x - w / 2, y - h / 2, x + w / 2, y + h / 2
     if 0 <= cat <= 10:
         cat = cat + 1
     elif 11 <= cat <= 23:
@@ -99,9 +96,9 @@ def evaluate_on_coco(cfg, resFile):
         unsorted_annotations = json.load(f)
     sorted_annotations = list(sorted(unsorted_annotations, key=lambda single_annotation: single_annotation["image_id"]))
     sorted_annotations = list(map(convert_cat_id_and_reorientate_bbox, sorted_annotations))
-    # reshaped_annotations = defaultdict(list)
-    # for annotation in sorted_annotations:
-    #     reshaped_annotations[annotation['image_id']].append(annotation)
+    reshaped_annotations = defaultdict(list)
+    for annotation in sorted_annotations:
+        reshaped_annotations[annotation['image_id']].append(annotation)
 
     with open('temp.json', 'w') as f:
         json.dump(sorted_annotations, f)
@@ -109,47 +106,47 @@ def evaluate_on_coco(cfg, resFile):
     cocoGt = COCO(cfg.gt_annotations_path)
     cocoDt = cocoGt.loadRes('temp.json')
 
-    # with open(cfg.gt_annotations_path, 'r') as f:
-    #     gt_annotation_raw = json.load(f)
-    #     gt_annotation_raw_images = gt_annotation_raw["images"]
-    #     gt_annotation_raw_labels = gt_annotation_raw["annotations"]
+    with open(cfg.gt_annotations_path, 'r') as f:
+        gt_annotation_raw = json.load(f)
+        gt_annotation_raw_images = gt_annotation_raw["images"]
+        gt_annotation_raw_labels = gt_annotation_raw["annotations"]
 
     rgb_label = (255, 0, 0)
     rgb_pred = (0, 255, 0)
 
-    # for i, image_id in enumerate(reshaped_annotations):
-    #     image_annotations = reshaped_annotations[image_id]
-    #     gt_annotation_image_raw = list(filter(
-    #         lambda image_json: image_json['id'] == image_id, gt_annotation_raw_images
-    #     ))
-    #     gt_annotation_labels_raw = list(filter(
-    #         lambda label_json: label_json['image_id'] == image_id, gt_annotation_raw_labels
-    #     ))
-    #     if len(gt_annotation_image_raw) == 1:
-    #         image_path = os.path.join(cfg.dataset_dir, gt_annotation_image_raw[0]["file_name"])
-    #         actual_image = Image.open(image_path).convert('RGB')
-    #         draw = ImageDraw.Draw(actual_image)
-    #
-    #         for annotation in image_annotations:
-    #             x1_pred, y1_pred, w, h = annotation['bbox']
-    #             x2_pred, y2_pred = x1_pred + w, y1_pred + h
-    #             cls_id = annotation['category_id']
-    #             label = get_class_name(cls_id)
-    #             draw.text((x1_pred, y1_pred), label, fill=rgb_pred)
-    #             draw.rectangle([x1_pred, y1_pred, x2_pred, y2_pred], outline=rgb_pred)
-    #         for annotation in gt_annotation_labels_raw:
-    #             x1_truth, y1_truth, w, h = annotation['bbox']
-    #             x2_truth, y2_truth = x1_truth + w, y1_truth + h
-    #             cls_id = annotation['category_id']
-    #             label = get_class_name(cls_id)
-    #             draw.text((x1_truth, y1_truth), label, fill=rgb_label)
-    #             draw.rectangle([x1_truth, y1_truth, x2_truth, y2_truth], outline=rgb_label)
-    #         actual_image.save("./data/outcome/predictions_{}".format(gt_annotation_image_raw[0]["file_name"]))
-    #     else:
-    #         print('please check')
-    #         break
-    #     if (i + 1) % 100 == 0: # just see first 100
-    #         break
+    for i, image_id in enumerate(reshaped_annotations):
+        image_annotations = reshaped_annotations[image_id]
+        gt_annotation_image_raw = list(filter(
+            lambda image_json: image_json['id'] == image_id, gt_annotation_raw_images
+        ))
+        gt_annotation_labels_raw = list(filter(
+            lambda label_json: label_json['image_id'] == image_id, gt_annotation_raw_labels
+        ))
+        if len(gt_annotation_image_raw) == 1:
+            image_path = os.path.join(cfg.dataset_dir, gt_annotation_image_raw[0]["file_name"])
+            actual_image = Image.open(image_path).convert('RGB')
+            draw = ImageDraw.Draw(actual_image)
+
+            for annotation in image_annotations:
+                x1_pred, y1_pred, w, h = annotation['bbox']
+                x2_pred, y2_pred = x1_pred + w, y1_pred + h
+                cls_id = annotation['category_id']
+                label = get_class_name(cls_id)
+                draw.text((x1_pred, y1_pred), label, fill=rgb_pred)
+                draw.rectangle([x1_pred, y1_pred, x2_pred, y2_pred], outline=rgb_pred)
+            for annotation in gt_annotation_labels_raw:
+                x1_truth, y1_truth, w, h = annotation['bbox']
+                x2_truth, y2_truth = x1_truth + w, y1_truth + h
+                cls_id = annotation['category_id']
+                label = get_class_name(cls_id)
+                draw.text((x1_truth, y1_truth), label, fill=rgb_label)
+                draw.rectangle([x1_truth, y1_truth, x2_truth, y2_truth], outline=rgb_label)
+            actual_image.save("./data/outcome/predictions_{}".format(gt_annotation_image_raw[0]["file_name"]))
+        else:
+            print('please check')
+            break
+        if (i + 1) % 100 == 0: # just see first 100
+            break
 
     imgIds = sorted(cocoGt.getImgIds())
     cocoEval = COCOeval(cocoGt, cocoDt, annType)
@@ -159,22 +156,25 @@ def evaluate_on_coco(cfg, resFile):
     cocoEval.summarize()
 
 
-def test(model, annotations, cfg):
+def test(session, annotations, cfg):
     if not annotations["images"]:
         print("Annotations do not have 'images' key")
         return
     images = annotations["images"]
     # images = images[:10]
-    resFile = 'data/dark_coco_val_outputs.json'
+    resFile = 'data/coco_val_outputs.json'
 
     if torch.cuda.is_available():
         use_cuda = 1
     else:
         use_cuda = 0
 
+    width = session.get_inputs()[0].shape[2]
+    height = session.get_inputs()[0].shape[3]
+
     # do one forward pass first to circumvent cold start
-    throwaway_image = Image.open('data/dog.jpg').convert('RGB').resize((model.width, model.height))
-    do_detect(model, throwaway_image, 0.5, 0.4, use_cuda)
+    throwaway_image = Image.open('data/dog.jpg').convert('RGB').resize((width, height))
+    do_detect(session, throwaway_image, 0.5, 0.4, use_cuda)
     boxes_json = []
 
     for i, image_annotation in enumerate(images):
@@ -186,14 +186,11 @@ def test(model, annotations, cfg):
 
         # open and resize each image first
         img = Image.open(os.path.join(cfg.dataset_dir, image_file_name)).convert('RGB')
-        sized = img.resize((model.width, model.height))
 
-        if use_cuda:
-            model.cuda()
+        sized = img.resize((width, height))
 
         start = time.time()
-
-        boxes = do_detect(model, sized, 0.1, 0.4, use_cuda)
+        boxes = do_detect(session, sized, 0.0, 0.4, use_cuda)
         finish = time.time()
         if type(boxes) == list:
             for box in boxes[0]:
@@ -250,6 +247,8 @@ def get_args(**kwargs):
                         help='weights file to load', dest='weights_file')
     parser.add_argument('-c', '--model_config', type=str, default='cfg/yolov4.cfg',
                         help='model config file to load', dest='model_config')
+    parser.add_argument('-o', type=str, default='',
+                        help='onnx path', dest='onnx_path')
     args = vars(parser.parse_args())
 
     for k in args.keys():
@@ -293,23 +292,42 @@ def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='w', s
     return logging
 
 
+def do_detect(session, img, conf_thresh, nms_thresh, use_cuda=1):
+    t0 = time.time()
+
+    # if type(img) == np.ndarray and len(img.shape) == 3:  # cv2 image
+    #     img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
+    # elif type(img) == np.ndarray and len(img.shape) == 4:
+    #     img = torch.from_numpy(img.transpose(0, 3, 1, 2)).float().div(255.0)
+    # else:
+    #     print("unknow image type")
+    #     exit(-1)
+
+    img = np.transpose(img, (2, 0, 1))
+    img = np.expand_dims(img, 0)
+    img = img.astype(np.float32) / 255.0
+    t1 = time.time()
+    input_name = session.get_inputs()[0].name
+
+    outputs = session.run(None, {input_name: img})
+
+    t2 = time.time()
+
+    print('-----------------------------------')
+    print('           Preprocess : %f' % (t1 - t0))
+    print('      Model Inference : %f' % (t2 - t1))
+    print('-----------------------------------')
+
+    return utils.post_processing(img, conf_thresh, nms_thresh, outputs)
+
 if __name__ == "__main__":
     logging = init_logger(log_dir='log')
     cfg = get_args(**Cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
-
-    model = Darknet(cfg.model_config)
-
-    model.print_network()
-    model.load_weights(cfg.weights_file)
-    model.eval()  # set model away from training
-
-    if torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model)
-
-    model.to(device=device)
+    import onnxruntime
+    session = onnxruntime.InferenceSession(cfg.onnx_path)
 
     annotations_file_path = cfg.gt_annotations_path
     with open(annotations_file_path) as annotations_file:
@@ -318,6 +336,6 @@ if __name__ == "__main__":
         except:
             print("annotations file not a json")
             exit()
-    test(model=model,
+    test(session=session,
          annotations=annotations,
          cfg=cfg, )

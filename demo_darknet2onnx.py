@@ -39,7 +39,7 @@ def main(cfg_file, namesfile, weight_file, image_path, batch_size, onnx_file_nam
             if inference_torch:
                 detect_torch(torchmodel, image_src, namesfile, conf=0.6, nms=0.213, out_name=out_name)
             else:
-                detect(session, image_src, namesfile, conf=0.6, nms=0.213, out_name=out_name)
+                detect(session, image_src, namesfile, conf=0.4, nms=0.5, out_name=out_name)
     else:
         image_src = cv2.imread(image_path)
         if inference_torch:
@@ -48,9 +48,29 @@ def main(cfg_file, namesfile, weight_file, image_path, batch_size, onnx_file_nam
             detect(session, image_src, namesfile)
 
 
+def onnx_infer(image_path, onnx_file_name=None, namesfile='data/coco.names'):
+    print(f'onnx_infer {onnx_file_name}')
+    session = onnxruntime.InferenceSession(onnx_file_name)
+    # session = onnx.load(onnx_path)
+    print("The model expects input shape: ", session.get_inputs()[0].shape)
+
+    if os.path.isdir(image_path):
+        dir = os.path.dirname(image_path)
+        dir = os.path.join(dir, 'pytorch-YOLOv4')
+        pathlib.Path(dir).mkdir(parents=True, exist_ok=True)
+        images = os.listdir(image_path)
+        for img in images:
+            img_path = os.path.join(image_path, img)
+            image_src = cv2.imread(img_path)
+            out_name = os.path.join(dir, img)
+            detect(session, image_src, namesfile, conf=0.4, nms=0.5, out_name=out_name)
+    else:
+        image_src = cv2.imread(image_path)
+        detect(session, image_src, namesfile)
+
 def resize(img, new_size, letter_box=False, interpolation=cv2.INTER_LINEAR, color=(0, 0, 0)):
     if not letter_box:
-        return  cv2.resize(img, new_size, interpolation=interpolation), new_size
+        return cv2.resize(img, new_size, interpolation=interpolation), new_size
     else:
         shape = img.shape[:2]  # current shape [height, width]
 
@@ -133,7 +153,12 @@ if __name__ == '__main__':
         batch_size = int(sys.argv[5])
         onnx_file_name = sys.argv[6] if len(sys.argv) >=7 else None
         torch_inference = sys.argv[7] if len(sys.argv) >=8 else False
+
         main(cfg_file, namesfile, weight_file, image_path, batch_size, onnx_file_name, torch_inference)
+    elif len(sys.argv) == 3:
+        image_path = sys.argv[1]
+        onnx_file_name = sys.argv[2]
+        onnx_infer(image_path, onnx_file_name=onnx_file_name)
     else:
         print('Please run this way:\n')
         print('  python demo_onnx.py <cfgFile> <namesFile> <weightFile> <imageFile> <batchSize>')

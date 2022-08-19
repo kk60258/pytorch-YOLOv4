@@ -72,16 +72,19 @@ def convert2cpu_long(gpu_matrix):
     return torch.LongTensor(gpu_matrix.size()).copy_(gpu_matrix)
 
 
-
+import PIL
 def do_detect(model, img, conf_thresh, nms_thresh, use_cuda=1):
     model.eval()
     with torch.no_grad():
         t0 = time.time()
-
+        print(type(img))
         if type(img) == np.ndarray and len(img.shape) == 3:  # cv2 image
             img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
         elif type(img) == np.ndarray and len(img.shape) == 4:
             img = torch.from_numpy(img.transpose(0, 3, 1, 2)).float().div(255.0)
+        elif type(img) == PIL.Image.Image:
+            img = np.array(img, dtype=np.float32)
+            img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
         else:
             print("unknow image type")
             exit(-1)
