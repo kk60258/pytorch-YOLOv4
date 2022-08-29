@@ -174,7 +174,7 @@ def test(model, annotations, cfg):
 
     # do one forward pass first to circumvent cold start
     throwaway_image = Image.open('data/dog.jpg').convert('RGB').resize((model.width, model.height))
-    do_detect(model, throwaway_image, 0.5, 0.4, use_cuda)
+    do_detect(model, throwaway_image, 1e-3, 0.6, use_cuda)
     boxes_json = []
 
     for i, image_annotation in enumerate(images):
@@ -193,7 +193,7 @@ def test(model, annotations, cfg):
 
         start = time.time()
 
-        boxes = do_detect(model, sized, 0.1, 0.4, use_cuda)
+        boxes = do_detect(model, sized, 1e-3, 0.6, use_cuda)
         finish = time.time()
         if type(boxes) == list:
             for box in boxes[0]:

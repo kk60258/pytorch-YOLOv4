@@ -162,7 +162,7 @@ def test(all_outout, annotations, cfg, length):
         image_width, image_height = info['size']
         output = list(zip(*layer_output))
         output = [np.concatenate(t, axis=1) for t in output]
-        boxes = utils.post_processing(None, 0.1, 0.4, output)
+        boxes = utils.post_processing(None, 1e-3, 0.6, output)
         finish = time.time()
         boxes_json_per_img = []
         if type(boxes) == list:
@@ -342,8 +342,8 @@ from tool.yolo_layer import YoloLayer
 
 def create_yolo_layer(blocks):
     model = []
-    # strides = [8, 16, 32]
-    strides = [32, 16]
+    strides = [8, 16, 32]
+    # strides = [32, 16]
     for block in blocks:
         if block['type'] == 'yolo':
             yolo_layer = YoloLayer()
@@ -373,8 +373,8 @@ if __name__ == "__main__":
     import onnxruntime
     blocks = parse_cfg(cfg.model_config)
     models = create_yolo_layer(blocks)
-    # dir = '/home/jason/Downloads/val2017_512_output'
-    dir = '/home/jason/Downloads/val2017_416_output'
+    dir = '/home/jason/Downloads/val2017_512_output'
+    # dir = '/home/jason/Downloads/val2017_416_output'
     img_dir = cfg.dataset_dir#'/home/jason/Downloads/val2017'
     npz_all = os.listdir(dir)
     length = len(npz_all)
@@ -382,10 +382,11 @@ if __name__ == "__main__":
 # yolov4_leaky/conv95_scales shape is (10, 64, 64, 6)
 # yolov4_leaky/conv95_obj shape is (10, 64, 64, 3)
 # yolov4_leaky/conv95_probs shape is (10, 64, 64, 240)
-#     layer_name = ['conv95', 'conv103', 'conv110']
-    layer_name = ['conv19', 'conv21']
-    net = 'yolov4_leaky'
-    net = 'yolov4-tiny-nodecode-416'#
+    layer_name = ['conv95', 'conv103', 'conv110']
+    # layer_name = ['conv19', 'conv21']
+    # net = 'yolov4_leaky'
+    net = 'yolov4-512'
+    # net = 'yolov4-tiny-nodecode-416'#
     # all_outout = {}
     def all_outout():
         for npz in tqdm(npz_all):
